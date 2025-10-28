@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Keep Client</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #f9fafb;
+        padding: 2rem;
+        color: #111;
+      }
+      h1 {
+        text-align: center;
+        font-size: 1.75rem;
+        margin-bottom: 1rem;
+      }
+      .status {
+        text-align: center;
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+      .connected {
+        color: green;
+      }
+      .disconnected {
+        color: red;
+      }
+      .box {
+        border: 1px solid #ddd;
+        background: #fff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+      button {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      select {
+        padding: 6px;
+        font-size: 0.9rem;
+      }
+      .save {
+        background: #406cf4;
+        border: none;
+        color: #fff;
+      }
+      .print {
+        background: transparent;
+        border: 1px solid #406cf4;
+        color: #406cf4;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Keep Client</h1>
+
+    <div id="status" class="status disconnected">Connecting to Agent...</div>
+
+    <div id="info" class="box">Loading...</div>
+
+    <div class="box">
+      <h3>Printers</h3>
+      <select id="printers"></select>
+      <button id="save" class="save">Save Default</button>
+    </div>
+
+    <div class="box">
+      <h3>Test Print</h3>
+      <button id="test" class="print">Print Test Receipt</button>
+    </div>
+
+    <script>
+      const AGENT_URL = "http://127.0.0.1:9100";
+
+      async function loadInfo() {
+        try {
+          const res = await fetch(`${AGENT_URL}/agent/info`);
+          if (!res.ok) throw new Error("Agent not responding");
+          const json = await res.json();
+
+          document.getElementById("status").textContent = "✅ Agent Connected";
+          document.getElementById("status").classList.remove("disconnected");
+          document.getElementById("status").classList.add("connected");
+
+          document.getElementById("info").innerHTML = `
+            <b>Agent:</b> ${json.name} v${json.version}<br/>
+            <b>Pairing Secret:</b> <code>${json.secret}</code><br/>
+            <b>Default Printer:</b> ${json.defaultPrinter || "<i>not set</i>"}
+          `;
+
+          const sel = document.getElementById("printers");
+          sel.innerHTML = "";
+          if (json.printers.length === 0) {
+            sel.innerHTML = "<option>No printers found</option>";
+          } else {
+            json.printers.forEach((p) => {
+              const opt = document.createElement("option");
+              opt.value = p;
+              opt.textContent = p;
+              if (p === json.defaultPrinter) opt.selected = true;
+              sel.appendChild(opt);
+            });
+          }
+
+          return json;
+        } catch (err) {
+          console.error("❌ Agent connection failed:", err);
+          document.getElementById("status").textContent =
+            "❌ Agent Not Found. Retrying...";
+          document.getElementById("status").classList.remove("connected");
+          document.getElementById("status").classList.add("disconnected");
+          setTimeout(loadInfo, 3000); // retry in 3s
+        }
+      }
+
+      document.getElementById("save").addEventListener("click", async () => {
+        const printer = document.getElementById("printers").value;
+        try {
+          await fetch(`${AGENT_URL}/printer/select`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ printer }),
+          });
+          alert("✅ Default printer saved successfully!");
+          loadInfo();
+        } catch (err) {
+          alert("❌ Failed to save default printer.");
+        }
+      });
+
+      document.getElementById("test").addEventListener("click", async () => {
+        try {
+          const infoRes = await fetch(`${AGENT_URL}/agent/info`);
+          const info = await infoRes.json();
+
+          const payload = {
+            type: "raw",
+            receipt: "KEEPOS TEST PRINT\nHello from KeepOS Print Agent!\n\n\n",
+          };
+
+          // Compute HMAC using agent secret
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            "raw",
+            enc.encode(info.secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"]
+          );
+          const signatureBuffer = await crypto.subtle.sign(
+            "HMAC",
+            key,
+            enc.encode(JSON.stringify(payload))
+          );
+          const signature = Array.from(new Uint8Array(signatureBuffer))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+
+          const res = await fetch(`${AGENT_URL}/print`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Signature": signature,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await res.json();
+          if (res.ok && result.ok) {
+            alert("🖨️ Test print sent successfully!");
+          } else {
+            alert("❌ Print failed: " + (result.error || "Unknown error"));
+          }
+        } catch (err) {
+          console.error("Print test error:", err);
+          alert("❌ Could not reach print agent.");
+        }
+      });
+
+      loadInfo();
+    </script>
+  </body>
+</html>

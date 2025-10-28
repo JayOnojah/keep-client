@@ -1,0 +1,90 @@
+{
+  "name": "keep-client",
+  "version": "0.1.0",
+  "description": "KeepOS Local Print Agent for secure, automatic restaurant printing.",
+  "main": "main.js",
+  "author": "Jeremiah Onojah",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node server.js",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "keep-os",
+    "print-agent",
+    "electron",
+    "pos",
+    "restaurant"
+  ],
+  "dependencies": {
+    "auto-launch": "^5.0.6",
+    "body-parser": "^1.20.3",
+    "express": "^4.21.2",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "app-builder-bin": "^4.2.0",
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3",
+    "electron-updater": "^6.6.2"
+  },
+  "build": {
+    "appId": "com.keepos.printagent",
+    "productName": "KeepOS Print Agent",
+    "asar": true,
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png",
+      "publisherName": "KEEP OS LTD"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "JayOnojah",
+        "repo": "keep-client",
+        "releaseType": "draft"
+      }
+    ]
+  }
+}
