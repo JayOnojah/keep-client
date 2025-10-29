@@ -1,9 +1,9 @@
 {
   "name": "keep-client",
   "version": "0.1.0",
-  "description": "KeepOS Local Print Agent for secure, automatic restaurant printing.",
+  "description": "KeepOS Local Print Agent for a Secure, Automatic Restaurant Printing.",
   "main": "main.js",
-  "author": "Jeremiah Onojah",
+  "author": "KEEP OS LTD",
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
